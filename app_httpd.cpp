@@ -1369,6 +1369,62 @@ static esp_err_t win_handler(httpd_req_t *req) {
   return httpd_resp_send(req, NULL, 0);
 }
 
+static esp_err_t index_handler2(httpd_req_t *req) {
+  httpd_resp_set_type(req, "text/html");
+  String page = "";
+  page+= "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0\">";
+  page+= "<script>var xhttp = new XMLHttpRequest();</script>";
+  page+= "<script>function getsend(arg) { xhttp.open('GET', arg +'?' + new Date().getTime(), true); xhttp.send() } </script>";
+  page+= "<div style='margin-top: 1px;'>";
+  page+= "";
+  page+= "<style>";
+  page+= "input[type=range] {";
+  page+= "  -webkit-appearance: none;";
+  page+= "  appearance: none;";
+  page+= "  background: #7d7d7d;";
+  page+= "}";
+  page+= "input[type=range]::-webkit-slider-thumb {";
+  page+= "  -webkit-appearance: none;";
+  page+= "  appearance: none;";
+  page+= "  width: 40px;";
+  page+= "  height: 40px;";
+  page+= "  background: #0048ff;";
+  page+= "  border: 2px solid #333333;";
+  page+= "  border-radius: 50%;";
+  page+= "}";
+  page+= ".Throttle {";
+  page+= "  width: 40px;";
+  page+= "  height: 300px;";
+  page+= "  writing-mode: vertical-lr;";
+  page+= "  direction: rtl;";
+  page+= "  margin: 0px 30px 0px 0px";
+  page+= "}";
+  page+= ".Steer {";
+  page+= "  width: 200px;";
+  page+= "  height: 40px;";
+  page+= "  margin: 0px 0px 0px 30px";
+  page+= "}";
+  page+= "</style>";
+  page+= "<div style='display: flex; flex-direction: row; align-items: center; justify-content: center;'>";
+  page+= "<p align=left>";
+  page+= "<input class='Throttle' type='range' min='0' max='255' value='0' id='throttleSlider' oninput='updateMotor(1, this.value)'>";
+  page+= "<p align=center><IMG SRC='127.0.0.1' style='width:350px; transform:rotate(0deg);'></p>";
+  page+= "<p align=right>";
+  page+= "<input class='Steer' id='steerSlider' type='range' min='-128' max='127' value='0' style='writing-mode: bt-lr;' oninput='updateMotor(2, this.value)' onmouseup='resetSteer()' ontouchend='resetSteer()'>";
+  page+= "<script>";
+  page+= "function updateMotor(func, amount) {";
+  page+= "var xhttp = new XMLHttpRequest();";
+  page+= "xhttp.open('GET', '/motor?f=' + func + '&a=' + amount, true);";
+  page+= "xhttp.send();";
+  page+= "}";
+  page+= "function resetSteer() {";
+  page+= "document.getElementById('steerSlider').value = '0';";
+  page+= "updateMotor(2, 0);";
+  page+= "}";
+  page+= "</script>";
+  return httpd_resp_send(req, &page[0], strlen(&page[0]));
+}
+
 static esp_err_t index_handler(httpd_req_t *req) {
   httpd_resp_set_type(req, "text/html");
   String page = "";
@@ -1418,6 +1474,64 @@ static esp_err_t index_handler(httpd_req_t *req) {
   page += "</script>";
 
   return httpd_resp_send(req, &page[0], strlen(&page[0]));
+}
+
+static esp_err_t motor_handler2(httpd_req_t *req) {
+  char*  buf;
+  size_t buf_len;
+  char function[32] = {1, 2};
+  signed char amount[32] = {0,};
+
+  buf_len = httpd_req_get_url_query_len(req) + 1;
+  if (buf_len > 1) {
+    buf = (char*)malloc(buf_len);
+    if (!buf) {
+      httpd_resp_send_500(req);
+      return ESP_FAIL;
+    }
+    if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
+      if (httpd_query_key_value(buf, "f", function, sizeof(motor)) == ESP_OK &&
+          httpd_query_key_value(buf, "a", amount, sizeof(mspeed)) == ESP_OK) {
+      } else {
+        free(buf);
+        httpd_resp_send_404(req);
+        return ESP_FAIL;
+      }
+    } else {
+      free(buf);
+      httpd_resp_send_404(req);
+      return ESP_FAIL;
+    }
+    free(buf);
+  } else {
+    httpd_resp_send_404(req);
+    return ESP_FAIL;
+  }
+
+  int f = atoi(function);
+  int a = atoi(amount);
+
+  double throttle;
+  double steer;
+  if (f == 1) {
+    throttle = a;
+  } else {
+    steer = a;
+  }
+
+  // Implement your motor control logic here based on motorNum and motorSpeed
+  if (motorNum == 1) {
+    motor1Speed = map(motorSpeed, 0, 255, 0, 255); // Map slider value to motor speed range
+    // Control your first motor using motor1Speed
+    analogWrite(gpLm, abs(motor1Speed)); // Assuming PWM control
+  } else if (motorNum == 2) {
+    motor2Speed = map(motorSpeed, 0, 255, 0, 255); // Map slider value to motor speed range
+    // Control your second motor using motor2Speed
+    analogWrite(gpRm, abs(motor2Speed)); // Assuming PWM control  }
+}
+
+  httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+  return httpd_resp_send(req, NULL, 0);
 }
 
 static esp_err_t motor_handler(httpd_req_t *req) {

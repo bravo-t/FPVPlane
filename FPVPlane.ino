@@ -1,4 +1,5 @@
 #include "esp_camera.h"
+#include "driver/temperature_sensor.h"
 #include <WiFi.h>
 #include <WiFiServer.h>
 
@@ -59,7 +60,7 @@ void setup() {
   config.pin_pwdn = PWDN_GPIO_NUM;
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
-  config.frame_size = FRAMESIZE_UXGA;
+  config.frame_size = FRAMESIZE_VGA;
   config.pixel_format = PIXFORMAT_JPEG;  // for streaming
   //config.pixel_format = PIXFORMAT_RGB565; // for face detection/recognition
   config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
@@ -126,7 +127,7 @@ void setup() {
 #endif
   
   WiFi.mode(WIFI_AP);
-  WiFi.softAP(ssid, password);
+  WiFi.softAP(ssid, password, 1, 0, 2);
   delay(100);
   IPAddress ip(192, 168, 1, 1);
   IPAddress mask(255, 255, 255, 0);
@@ -141,7 +142,15 @@ void setup() {
   WiFiAddr = IP.toString();
 }
 
+temperature_sensor_handle_t temp_handle = NULL;
+temperature_sensor_config_t temp_sensor_config = TEMPERATURE_SENSOR_CONFIG_DEFAULT(0, 90);
+
 void loop() {
   // Do nothing. Everything is done in another task by the web server
-  delay(10000);
+  ESP_ERROR_CHECK(temperature_sensor_enable(temp_handle));
+  float temperature;
+  ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_handle, &temperature));
+  ESP_ERROR_CHECK(temperature_sensor_disable(temp_handle));
+  Serial.printf("Current temp: %f C\n", temperature);
+  delay(1000);
 }
