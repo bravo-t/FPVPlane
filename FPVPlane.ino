@@ -136,7 +136,8 @@ void setup() {
   Serial.print("AP IP address: http://");
   Serial.println(IP);
 
-  server.begin();
+  // Second server for video
+  server.begin(81);
 
   startCameraServer();
 
