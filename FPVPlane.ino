@@ -20,8 +20,8 @@
 // ===========================
 // Enter your WiFi credentials
 // ===========================
-const char *ssid = "**********";
-const char *password = "**********";
+const char *ssid = "FPVPlane";
+const char *password = "tang1783";
 
 extern int gpLm = D2; // Motor 1
 extern int gpRm = D3; // Motor 2
@@ -135,9 +135,6 @@ void setup() {
   IPAddress IP = WiFi.softAPIP();
   Serial.print("AP IP address: http://");
   Serial.println(IP);
-
-  // Second server for video
-  server.begin(81);
 
   startCameraServer();
 
