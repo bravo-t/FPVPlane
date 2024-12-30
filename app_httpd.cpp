@@ -124,7 +124,7 @@ static const char *_STREAM_BOUNDARY = "\r\n--" PART_BOUNDARY "\r\n";
 static const char *_STREAM_PART = "Content-Type: image/jpeg\r\nContent-Length: %u\r\nX-Timestamp: %d.%06d\r\n\r\n";
 
 httpd_handle_t stream_httpd = NULL;
-httpd_handle_t camera_httpd = NULL;
+httpd_handle_t server_httpd = NULL;
 
 #if CONFIG_ESP_FACE_DETECT_ENABLED
 
@@ -1229,6 +1229,534 @@ static esp_err_t status_handler(httpd_req_t *req) {
   return httpd_resp_send(req, json_response, strlen(json_response));
 }
 
+static esp_err_t config_page(httpd_req_t *req) {
+  httpd_resp_set_type(req, "text/html");
+  String page = "";
+  page += "<!doctype html>";
+  page += "<html>";
+  page += "  <head>";
+  page += "    <meta charset="utf-8">";
+  page += "    <meta name="viewport" content="width=device-width,initial-scale=1">";
+  page += "    <title>FPVPlane Settings</title>";
+  page += "    <style>";
+  page += "      body {";
+  page += "        font-family: Arial,Helvetica,sans-serif;";
+  page += "        background: #181818;";
+  page += "        color: #EFEFEF;";
+  page += "        font-size: 16px";
+  page += "      }";
+  page += "      h2 {";
+  page += "        font-size: 18px";
+  page += "      }";
+  page += "      section.main {";
+  page += "        display: flex";
+  page += "      }";
+  page += "      #menu,section.main {";
+  page += "        flex-direction: column";
+  page += "      }";
+  page += "      #menu {";
+  page += "        display: none;";
+  page += "        flex-wrap: nowrap;";
+  page += "        min-width: 340px;";
+  page += "        background: #363636;";
+  page += "        padding: 8px;";
+  page += "        border-radius: 4px;";
+  page += "        margin-top: -10px;";
+  page += "        margin-right: 10px;";
+  page += "      }";
+  page += "      #content {";
+  page += "        display: flex;";
+  page += "        flex-wrap: wrap;";
+  page += "        align-items: stretch";
+  page += "      }";
+  page += "      figure {";
+  page += "        padding: 0px;";
+  page += "        margin: 0;";
+  page += "        -webkit-margin-before: 0;";
+  page += "        margin-block-start: 0;";
+  page += "        -webkit-margin-after: 0;";
+  page += "        margin-block-end: 0;";
+  page += "        -webkit-margin-start: 0;";
+  page += "        margin-inline-start: 0;";
+  page += "        -webkit-margin-end: 0;";
+  page += "        margin-inline-end: 0";
+  page += "      }";
+  page += "      figure img {";
+  page += "        display: block;";
+  page += "        width: 100%;";
+  page += "        height: auto;";
+  page += "        border-radius: 4px;";
+  page += "        margin-top: 8px;";
+  page += "      }";
+  page += "      @media (min-width: 800px) and (orientation:landscape) {";
+  page += "        #content {";
+  page += "          display:flex;";
+  page += "          flex-wrap: nowrap;";
+  page += "          align-items: stretch";
+  page += "        }";
+  page += "        figure img {";
+  page += "          display: block;";
+  page += "          max-width: 100%;";
+  page += "          max-height: calc(100vh - 40px);";
+  page += "          width: auto;";
+  page += "          height: auto";
+  page += "        }";
+  page += "        figure {";
+  page += "          padding: 0 0 0 0px;";
+  page += "          margin: 0;";
+  page += "          -webkit-margin-before: 0;";
+  page += "          margin-block-start: 0;";
+  page += "          -webkit-margin-after: 0;";
+  page += "          margin-block-end: 0;";
+  page += "          -webkit-margin-start: 0;";
+  page += "          margin-inline-start: 0;";
+  page += "          -webkit-margin-end: 0;";
+  page += "          margin-inline-end: 0";
+  page += "        }";
+  page += "      }";
+  page += "      section#buttons {";
+  page += "        display: flex;";
+  page += "        flex-wrap: nowrap;";
+  page += "        justify-content: space-between";
+  page += "      }";
+  page += "      #nav-toggle {";
+  page += "        cursor: pointer;";
+  page += "        display: block";
+  page += "      }";
+  page += "      #nav-toggle-cb {";
+  page += "        outline: 0;";
+  page += "        opacity: 0;";
+  page += "        width: 0;";
+  page += "        height: 0";
+  page += "      }";
+  page += "      #nav-toggle-cb:checked+#menu {";
+  page += "        display: flex";
+  page += "      }";
+  page += "      .input-group {";
+  page += "        display: flex;";
+  page += "        flex-wrap: nowrap;";
+  page += "        line-height: 22px;";
+  page += "        margin: 5px 0";
+  page += "      }";
+  page += "      .input-group>label {";
+  page += "        display: inline-block;";
+  page += "        padding-right: 10px;";
+  page += "        min-width: 47%";
+  page += "      }";
+  page += "      .input-group input,.input-group select {";
+  page += "        flex-grow: 1";
+  page += "      }";
+  page += "      .range-max,.range-min {";
+  page += "        display: inline-block;";
+  page += "        padding: 0 5px";
+  page += "      }";
+  page += "      button, .button {";
+  page += "        display: block;";
+  page += "        margin: 5px;";
+  page += "        padding: 0 12px;";
+  page += "        border: 0;";
+  page += "        line-height: 28px;";
+  page += "        cursor: pointer;";
+  page += "        color: #fff;";
+  page += "        background: #ff3034;";
+  page += "        border-radius: 5px;";
+  page += "        font-size: 16px;";
+  page += "        outline: 0";
+  page += "      }";
+  page += "      .save {";
+  page += "        position: absolute;";
+  page += "        right: 25px;";
+  page += "        top: 0px;";
+  page += "        height: 16px;";
+  page += "        line-height: 16px;";
+  page += "        padding: 0 4px;";
+  page += "        text-decoration: none;";
+  page += "        cursor: pointer";
+  page += "      }";
+  page += "      button:hover {";
+  page += "        background: #ff494d";
+  page += "      }";
+  page += "      button:active {";
+  page += "        background: #f21c21";
+  page += "      }";
+  page += "      button.disabled {";
+  page += "        cursor: default;";
+  page += "        background: #a0a0a0";
+  page += "      }";
+  page += "      input[type=range] {";
+  page += "        -webkit-appearance: none;";
+  page += "        width: 100%;";
+  page += "        height: 22px;";
+  page += "        background: #363636;";
+  page += "        cursor: pointer;";
+  page += "        margin: 0";
+  page += "      }";
+  page += "      input[type=range]:focus {";
+  page += "        outline: 0";
+  page += "      }";
+  page += "      input[type=range]::-webkit-slider-runnable-track {";
+  page += "        width: 100%;";
+  page += "        height: 2px;";
+  page += "        cursor: pointer;";
+  page += "        background: #EFEFEF;";
+  page += "        border-radius: 0;";
+  page += "        border: 0 solid #EFEFEF";
+  page += "      }";
+  page += "      input[type=range]::-webkit-slider-thumb {";
+  page += "        border: 1px solid rgba(0,0,30,0);";
+  page += "        height: 22px;";
+  page += "        width: 22px;";
+  page += "        border-radius: 50px;";
+  page += "        background: #ff3034;";
+  page += "        cursor: pointer;";
+  page += "        -webkit-appearance: none;";
+  page += "        margin-top: -11.5px";
+  page += "      }";
+  page += "      input[type=range]:focus::-webkit-slider-runnable-track {";
+  page += "        background: #EFEFEF";
+  page += "      }";
+  page += "      input[type=range]::-moz-range-track {";
+  page += "        width: 100%;";
+  page += "        height: 2px;";
+  page += "        cursor: pointer;";
+  page += "        background: #EFEFEF;";
+  page += "        border-radius: 0;";
+  page += "        border: 0 solid #EFEFEF";
+  page += "      }";
+  page += "      input[type=range]::-moz-range-thumb {";
+  page += "        border: 1px solid rgba(0,0,30,0);";
+  page += "        height: 22px;";
+  page += "        width: 22px;";
+  page += "        border-radius: 50px;";
+  page += "        background: #ff3034;";
+  page += "        cursor: pointer";
+  page += "      }";
+  page += "      input[type=range]::-ms-track {";
+  page += "        width: 100%;";
+  page += "        height: 2px;";
+  page += "        cursor: pointer;";
+  page += "        background: 0 0;";
+  page += "        border-color: transparent;";
+  page += "        color: transparent";
+  page += "      }";
+  page += "      input[type=range]::-ms-fill-lower {";
+  page += "        background: #EFEFEF;";
+  page += "        border: 0 solid #EFEFEF;";
+  page += "        border-radius: 0";
+  page += "      }";
+  page += "      input[type=range]::-ms-fill-upper {";
+  page += "        background: #EFEFEF;";
+  page += "        border: 0 solid #EFEFEF;";
+  page += "        border-radius: 0";
+  page += "      }";
+  page += "      input[type=range]::-ms-thumb {";
+  page += "        border: 1px solid rgba(0,0,30,0);";
+  page += "        height: 22px;";
+  page += "        width: 22px;";
+  page += "        border-radius: 50px;";
+  page += "        background: #ff3034;";
+  page += "        cursor: pointer;";
+  page += "        height: 2px";
+  page += "      }";
+  page += "      input[type=range]:focus::-ms-fill-lower {";
+  page += "        background: #EFEFEF";
+  page += "      }";
+  page += "      input[type=range]:focus::-ms-fill-upper {";
+  page += "        background: #363636";
+  page += "      }";
+  page += "      .switch {";
+  page += "        display: block;";
+  page += "        position: relative;";
+  page += "        line-height: 22px;";
+  page += "        font-size: 16px;";
+  page += "        height: 22px";
+  page += "      }";
+  page += "      .switch input {";
+  page += "        outline: 0;";
+  page += "        opacity: 0;";
+  page += "        width: 0;";
+  page += "        height: 0";
+  page += "      }";
+  page += "      .slider {";
+  page += "        width: 50px;";
+  page += "        height: 22px;";
+  page += "        border-radius: 22px;";
+  page += "        cursor: pointer;";
+  page += "        background-color: grey";
+  page += "      }";
+  page += "      .slider,.slider:before {";
+  page += "        display: inline-block;";
+  page += "        transition: .4s";
+  page += "      }";
+  page += "      .slider:before {";
+  page += "        position: relative;";
+  page += "        content: "";";
+  page += "        border-radius: 50%;";
+  page += "        height: 16px;";
+  page += "        width: 16px;";
+  page += "        left: 4px;";
+  page += "        top: 3px;";
+  page += "        background-color: #fff";
+  page += "      }";
+  page += "      input:checked+.slider {";
+  page += "        background-color: #ff3034";
+  page += "      }";
+  page += "      input:checked+.slider:before {";
+  page += "        -webkit-transform: translateX(26px);";
+  page += "        transform: translateX(26px)";
+  page += "      }";
+  page += "      select {";
+  page += "        border: 1px solid #363636;";
+  page += "        font-size: 14px;";
+  page += "        height: 22px;";
+  page += "        outline: 0;";
+  page += "        border-radius: 5px";
+  page += "      }";
+  page += "      .image-container {";
+  page += "        position: relative;";
+  page += "        min-width: 160px";
+  page += "      }";
+  page += "      .close {";
+  page += "        position: absolute;";
+  page += "        right: 5px;";
+  page += "        top: 5px;";
+  page += "        background: #ff3034;";
+  page += "        width: 16px;";
+  page += "        height: 16px;";
+  page += "        border-radius: 100px;";
+  page += "        color: #fff;";
+  page += "        text-align: center;";
+  page += "        line-height: 18px;";
+  page += "        cursor: pointer";
+  page += "      }";
+  page += "      .hidden {";
+  page += "        display: none";
+  page += "      }";
+  page += "      input[type=text] {";
+  page += "        border: 1px solid #363636;";
+  page += "        font-size: 14px;";
+  page += "        height: 20px;";
+  page += "        margin: 1px;";
+  page += "        outline: 0;";
+  page += "        border-radius: 5px";
+  page += "      }";
+  page += "      .inline-button {";
+  page += "        line-height: 20px;";
+  page += "        margin: 2px;";
+  page += "        padding: 1px 4px 2px 4px;";
+  page += "      }";
+  page += "      label.toggle-section-label {";
+  page += "        cursor: pointer;";
+  page += "        display: block";
+  page += "      }";
+  page += "      input.toggle-section-button {";
+  page += "        outline: 0;";
+  page += "        opacity: 0;";
+  page += "        width: 0;";
+  page += "        height: 0";
+  page += "      }";
+  page += "      input.toggle-section-button:checked+section.toggle-section {";
+  page += "        display: none";
+  page += "      }";
+  page += "    </style>";
+  page += "  </head>";
+  page += "  <body>";
+  page += "    <section class="main">";
+  page += "      <div id="logo">";
+  page += "        <label>FPVPlane settings</label>";
+  page += "      </div>";
+  page += "      <div id="content">";
+  page += "        <div id="sidebar">";
+  page += "          <input type="checkbox" id="nav-toggle-cb" checked="checked">";
+  page += "          <nav id="menu">";
+  page += "            <section id="steer" class="nothidden">";
+  page += "              <div class="input-group" id="set-xclk-group">";
+  page += "                <label for="max-steer">Max Steer</label>";
+  page += "                <div class="text">";
+  page += "                  <input id="max-steer" type="text" minlength="1" maxlength="3" size="2" value="10">";
+  page += "                </div>";
+  page += "                <button class="inline-button" id="set-max-steer">Set</button>";
+  page += "              </div>";
+  page += "            </section>";
+  page += "            <div class="input-group" id="framesize-group">";
+  page += "              <label for="framesize">Resolution</label>";
+  page += "              <select id="framesize" class="default-action">";
+  page += "                <!-- 2MP -->";
+  page += "                <option value="13">UXGA(1600x1200)</option>";
+  page += "                <option value="12">SXGA(1280x1024)</option>";
+  page += "                <option value="11">HD(1280x720)</option>";
+  page += "                <option value="10">XGA(1024x768)</option>";
+  page += "                <option value="9">SVGA(800x600)</option>";
+  page += "                <option value="8">VGA(640x480)</option>";
+  page += "                <option value="7">HVGA(480x320)</option>";
+  page += "                <option value="6">CIF(400x296)</option>";
+  page += "                <option value="5">QVGA(320x240)</option>";
+  page += "                <option value="4">240x240</option>";
+  page += "                <option value="3">HQVGA(240x176)</option>";
+  page += "                <option value="2">QCIF(176x144)</option>";
+  page += "                <option value="1">QQVGA(160x120)</option>";
+  page += "                <option value="0">96x96</option>";
+  page += "              </select>";
+  page += "            </div>";
+  page += "            <div class="input-group" id="quality-group">";
+  page += "              <label for="quality">Quality</label>";
+  page += "              <div class="range-min">4</div>";
+  page += "              <input type="range" id="quality" min="4" max="63" value="10" class="default-action">";
+  page += "              <div class="range-max">63</div>";
+  page += "            </div>";
+  page += "          </nav>";
+  page += "        </div>";
+  page += "      </div>";
+  page += "    </section>";
+  page += "    <script>";
+  page += "document.addEventListener('DOMContentLoaded', function (event) {";
+  page += "  var baseHost = document.location.origin";
+  page += "  var streamUrl = baseHost + ':81'";
+  page += "  function fetchUrl(url, cb){";
+  page += "  fetch(url)";
+  page += "    .then(function (response) {";
+  page += "    if (response.status !== 200) {";
+  page += "      cb(response.status, response.statusText);";
+  page += "    } else {";
+  page += "      response.text().then(function(data){";
+  page += "      cb(200, data);";
+  page += "      }).catch(function(err) {";
+  page += "      cb(-1, err);";
+  page += "      });";
+  page += "    }";
+  page += "    })";
+  page += "    .catch(function(err) {";
+  page += "    cb(-1, err);";
+  page += "    });";
+  page += "  }";
+  page += "  function setMaxSteer(steer, cb){";
+  page += "  fetchUrl(`${baseHost}/settings?var=steer&val=${steer}`, cb);";
+  page += "  }";
+  page += "  const setSteerButton = document.getElementById('set-max-steer')";
+  page += "  setSteerButton.onclick = () => {";
+  page += "  let value = parseInt(document.getElementById('max-steer').value);";
+  page += "  setMaxSteer(value, function(code, txt){";
+  page += "    if(code != 200){";
+  page += "    alert('Error['+code+']: '+txt);";
+  page += "    }";
+  page += "  });";
+  page += "  }";
+  page += "  const hide = el => {";
+  page += "  el.classList.add('hidden')";
+  page += "  }";
+  page += "  const show = el => {";
+  page += "  el.classList.remove('hidden')";
+  page += "  }";
+  page += "  const disable = el => {";
+  page += "  el.classList.add('disabled')";
+  page += "  el.disabled = true";
+  page += "  }";
+  page += "  const enable = el => {";
+  page += "  el.classList.remove('disabled')";
+  page += "  el.disabled = false";
+  page += "  }";
+  page += "  const updateValue = (el, value, updateRemote) => {";
+  page += "  updateRemote = updateRemote == null ? true : updateRemote";
+  page += "  let initialValue";
+  page += "  if (el.type === 'checkbox') {";
+  page += "    initialValue = el.checked";
+  page += "    value = !!value";
+  page += "    el.checked = value";
+  page += "  } else {";
+  page += "    initialValue = el.value";
+  page += "    el.value = value";
+  page += "  }";
+  page += "  if (updateRemote && initialValue !== value) {";
+  page += "    updateConfig(el);";
+  page += "  } else if(!updateRemote){";
+  page += "  }";
+  page += "  }";
+  page += "  function updateConfig (el) {";
+  page += "  let value";
+  page += "  switch (el.type) {";
+  page += "    case 'checkbox':";
+  page += "    value = el.checked ? 1 : 0";
+  page += "    break";
+  page += "    case 'range':";
+  page += "    case 'select-one':";
+  page += "    value = el.value";
+  page += "    break";
+  page += "    case 'button':";
+  page += "    case 'submit':";
+  page += "    value = '1'";
+  page += "    break";
+  page += "    default:";
+  page += "    return";
+  page += "  }";
+  page += "  const query = `${baseHost}/settings?var=${el.id}&val=${value}`";
+  page += "  fetch(query)";
+  page += "    .then(response => {";
+  page += "    console.log(`request to ${query} finished, status: ${response.status}`)";
+  page += "    })";
+  page += "  }";
+  page += "  document";
+  page += "  .querySelectorAll('.close')";
+  page += "  .forEach(el => {";
+  page += "    el.onclick = () => {";
+  page += "    hide(el.parentNode)";
+  page += "    }";
+  page += "  })";
+  page += "  // Attach default on change action";
+  page += "  document";
+  page += "  .querySelectorAll('.default-action')";
+  page += "  .forEach(el => {";
+  page += "    el.onchange = () => updateConfig(el)";
+  page += "  })";
+  page += "  // Custom actions";
+  page += "  // Gain";
+  page += "})";
+  page += "    </script>";
+  page += "  </body>";
+  page += "</html>";
+  return httpd_resp_send(req, &page[0], strlen(&page[0]));
+}
+
+static esp_err_t settings_handler(httpd_req_t *req) {
+  char *buf = NULL;
+  char variable[32];
+  char value[32];
+
+  if (parse_get(req, &buf) != ESP_OK) {
+    return ESP_FAIL;
+  }
+  if (httpd_query_key_value(buf, "var", variable, sizeof(variable)) != ESP_OK || httpd_query_key_value(buf, "val", value, sizeof(value)) != ESP_OK) {
+    free(buf);
+    httpd_resp_send_404(req);
+    return ESP_FAIL;
+  }
+  free(buf);
+
+  int val = atoi(value);
+  Serial.printf("%s = %d\n", variable, val);
+  sensor_t *s = esp_camera_sensor_get();
+  int res = 0;
+
+  if (!strcmp(variable, "framesize")) {
+    if (s->pixformat == PIXFORMAT_JPEG) {
+      res = s->set_framesize(s, (framesize_t)val);
+    }
+  } else if (!strcmp(variable, "quality")) {
+    res = s->set_quality(s, val);
+  } else if (!strcmp(variable, "steer")) {
+    maxSteer = val;
+  } else {
+    Serial.printf("Unknown command: %s\n", variable);
+    res = -1;
+  }
+
+  if (res < 0) {
+    return httpd_resp_send_500(req);
+  }
+
+  httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
+  return httpd_resp_send(req, NULL, 0);
+}
+
 static esp_err_t xclk_handler(httpd_req_t *req) {
   char *buf = NULL;
   char _xclk[32];
@@ -1535,12 +2063,14 @@ static esp_err_t motor_handler2(httpd_req_t *req) {
     /// Throttle
     amountValue = map(amountValue, 0, 255, 0, maxMotorSpeed); // Map slider value to motor speed range
     calcMotorSpeed(amountValue, prevSteer, &motor1Speed, &motor2Speed);
+    Serial.printf("throttle: %d, steer: %d, left motor speed: %d, right motor speed: %d\n", amountValue, prevSteer, motor1Speed, motor2Speed);
     analogWrite(gpLm, abs(motor1Speed)); // Assuming PWM control
     analogWrite(gpRm, abs(motor2Speed)); // Assuming PWM control
     prevThrottle = amountValue;
   } else if (funcValue == 2) {
     amountValue = map(amountValue, -128, 127, -maxSteer, maxSteer); // Map slider value to motor speed range
     calcMotorSpeed(prevThrottle, amountValue, &motor1Speed, &motor2Speed);
+    Serial.printf("throttle: %d, steer: %d, left motor speed: %d, right motor speed: %d\n", prevThrottle, amountValue, motor1Speed, motor2Speed);
     analogWrite(gpLm, abs(motor1Speed)); // Assuming PWM control
     analogWrite(gpRm, abs(motor2Speed)); // Assuming PWM control
     prevSteer = amountValue;
@@ -1604,6 +2134,19 @@ void startCameraServer() {
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   config.max_uri_handlers = 16;
   
+  httpd_uri_t config_uri = {
+    .uri = "/config",
+    .method = HTTP_GET,
+    .handler = config_page,
+    .user_ctx = NULL
+#ifdef CONFIG_HTTPD_WS_SUPPORT
+    ,
+    .is_websocket = true,
+    .handle_ws_control_frames = false,
+    .supported_subprotocol = NULL
+#endif
+  };
+  
   httpd_uri_t settings_uri = {
     .uri = "/settings",
     .method = HTTP_GET,
@@ -1620,7 +2163,7 @@ void startCameraServer() {
   httpd_uri_t motor_uri = {
     .uri       = "/motor",
     .method    = HTTP_GET,
-    .handler   = motor_handler,
+    .handler   = motor_handler2,
     .user_ctx  = NULL
 #ifdef CONFIG_HTTPD_WS_SUPPORT
     ,
@@ -1633,7 +2176,7 @@ void startCameraServer() {
   httpd_uri_t index_uri = {
     .uri = "/",
     .method = HTTP_GET,
-    .handler = index_handler,
+    .handler = index_handler2,
     .user_ctx = NULL
 #ifdef CONFIG_HTTPD_WS_SUPPORT
     ,
@@ -1781,9 +2324,11 @@ void startCameraServer() {
   recognizer.set_ids_from_flash();
 #endif
   Serial.printf("Starting web server on port: '%d'\n", config.server_port);
-  if (httpd_start(&camera_httpd, &config) == ESP_OK) {
-    httpd_register_uri_handler(camera_httpd, &index_uri);
-    httpd_register_uri_handler(camera_httpd, &motor_uri);
+  if (httpd_start(&server_httpd, &config) == ESP_OK) {
+    httpd_register_uri_handler(server_httpd, &index_uri);
+    httpd_register_uri_handler(server_httpd, &motor_uri);
+    httpd_register_uri_handler(server_httpd, &config_uri);
+    httpd_register_uri_handler(server_httpd, &settings_uri);
   }
 
   config.server_port += 1;

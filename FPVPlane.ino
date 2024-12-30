@@ -145,6 +145,7 @@ void setup() {
 temperature_sensor_handle_t temp_handle = NULL;
 temperature_sensor_config_t temp_sensor_config = TEMPERATURE_SENSOR_CONFIG_DEFAULT(0, 90);
 
+int idleCounter = 0;
 void loop() {
   // Do nothing. Everything is done in another task by the web server
   ESP_ERROR_CHECK(temperature_sensor_enable(temp_handle));
@@ -152,5 +153,18 @@ void loop() {
   ESP_ERROR_CHECK(temperature_sensor_get_celsius(temp_handle, &temperature));
   ESP_ERROR_CHECK(temperature_sensor_disable(temp_handle));
   Serial.printf("Current temp: %f C\n", temperature);
+
+  if (WiFi.softAPgetStationNum() <= 0) {
+    ++idleCounter;
+  } else {
+    idleCounter = 0;
+  }
+
+  if (idleCounter >= 60) {
+    Serial.printf("Put camera to sleep\n", temperature);
+    sensor_t *s = esp_camera_sensor_get();
+    int res = s->set_xclk(s, LEDC_TIMER_0, 1);
+  }
+
   delay(1000);
 }
