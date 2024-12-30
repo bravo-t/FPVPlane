@@ -22,6 +22,26 @@ extern int gpRm;
 
 int motor1Speed = 0;
 int motor2Speed = 0;
+int prevThrottle = 0;
+int prevSteer = 0;
+int maxMotorSpeed = 255;
+float maxSteer = 20;
+
+void
+calcMotorSpeed(int throttle, int steer, int* motor1Speed, int* motor2Speed)
+{
+  int availThrottle = maxMotorSpeed - maxSteer;
+  int speed1 = throttle > availThrottle ? availThrottle : throttle;
+  int speed2 = speed1;
+  if (steer > 0) {
+    steer = steer > maxSteer ? maxSteer : steer;
+    speed1 += steer;
+  } else {
+    steer = -steer;
+    steer = steer > maxSteer ? maxSteer : steer;
+    speed2 += steer;
+  }
+}
 
 extern String WiFiAddr;
 
@@ -1508,26 +1528,22 @@ static esp_err_t motor_handler2(httpd_req_t *req) {
     return ESP_FAIL;
   }
 
-  int f = atoi(function);
-  int a = atoi(amount);
+  int funcValue = atoi(function);
+  int amountValue = atoi(amount);
 
-  double throttle;
-  double steer;
-  if (f == 1) {
-    throttle = a;
-  } else {
-    steer = a;
-  }
-
-  // Implement your motor control logic here based on motorNum and motorSpeed
-  if (motorNum == 1) {
-    motor1Speed = map(motorSpeed, 0, 255, 0, 255); // Map slider value to motor speed range
-    // Control your first motor using motor1Speed
+  if (funcValue == 1) {
+    /// Throttle
+    amountValue = map(amountValue, 0, 255, 0, maxMotorSpeed); // Map slider value to motor speed range
+    calcMotorSpeed(amountValue, prevSteer, &motor1Speed, &motor2Speed);
     analogWrite(gpLm, abs(motor1Speed)); // Assuming PWM control
-  } else if (motorNum == 2) {
-    motor2Speed = map(motorSpeed, 0, 255, 0, 255); // Map slider value to motor speed range
-    // Control your second motor using motor2Speed
-    analogWrite(gpRm, abs(motor2Speed)); // Assuming PWM control  }
+    analogWrite(gpRm, abs(motor2Speed)); // Assuming PWM control
+    prevThrottle = amountValue;
+  } else if (funcValue == 2) {
+    amountValue = map(amountValue, -128, 127, -maxSteer, maxSteer); // Map slider value to motor speed range
+    calcMotorSpeed(prevThrottle, amountValue, &motor1Speed, &motor2Speed);
+    analogWrite(gpLm, abs(motor1Speed)); // Assuming PWM control
+    analogWrite(gpRm, abs(motor2Speed)); // Assuming PWM control
+    prevSteer = amountValue;
 }
 
   httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
