@@ -1604,6 +1604,19 @@ void startCameraServer() {
   httpd_config_t config = HTTPD_DEFAULT_CONFIG();
   config.max_uri_handlers = 16;
   
+  httpd_uri_t settings_uri = {
+    .uri = "/settings",
+    .method = HTTP_GET,
+    .handler = settings_handler,
+    .user_ctx = NULL
+#ifdef CONFIG_HTTPD_WS_SUPPORT
+    ,
+    .is_websocket = true,
+    .handle_ws_control_frames = false,
+    .supported_subprotocol = NULL
+#endif
+  };
+  
   httpd_uri_t motor_uri = {
     .uri       = "/motor",
     .method    = HTTP_GET,
