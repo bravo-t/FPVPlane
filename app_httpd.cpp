@@ -17,6 +17,13 @@
 #include "img_converters.h"
 #include "Arduino.h"
 
+#define CAM_USE_MULTICLIENT 0
+#if CAM_USE_MULTICLIENT == 1
+#define CAM_STREAMER_DESIRED_FPS 20
+#include "cam_streamer.h"
+cam_streamer_t* cam_streamer;
+#endif
+
 extern int gpLm;
 extern int gpRm;
 
@@ -760,6 +767,16 @@ static esp_err_t stream_handler(httpd_req_t *req) {
 */
 
 static esp_err_t stream_handler(httpd_req_t *req) {
+#if CAM_USE_MULTICLIENT == 1
+  int fd=httpd_req_to_sockfd(req);
+	if(fd==-1){
+		printf("[stream_handler] could not get socket fd!\n");
+		return ESP_FAIL;
+	}
+
+	cam_streamer_enqueue_client(cam_streamer, fd);
+	return ESP_OK;
+#else
   camera_fb_t *fb = NULL;
   struct timeval _timestamp;
   esp_err_t res = ESP_OK;
@@ -1010,6 +1027,7 @@ static esp_err_t stream_handler(httpd_req_t *req) {
 #endif
 
   return res;
+#endif
 }
 
 static esp_err_t parse_get(httpd_req_t *req, char **obuf) {
@@ -2339,6 +2357,12 @@ void startCameraServer() {
   Serial.printf("Starting stream server on port: '%d'\n", config.server_port);
   if (httpd_start(&stream_httpd, &config) == ESP_OK) {
     httpd_register_uri_handler(stream_httpd, &stream_uri);
+#if CAM_USE_MULTICLIENT == 1
+    cam_streamer=(cam_streamer_t *) malloc(sizeof(cam_streamer_t));
+		cam_streamer_init(cam_streamer, stream_httpd, CAM_STREAMER_DESIRED_FPS);
+		cam_streamer_start(cam_streamer);
+#endif
+		}
   }
 }
 
