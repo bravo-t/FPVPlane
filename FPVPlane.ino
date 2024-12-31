@@ -32,6 +32,9 @@ void startCameraServer();
 void setupLedFlash(int pin);
 WiFiServer server(80);
 
+temperature_sensor_handle_t temp_handle = NULL;
+temperature_sensor_config_t temp_sensor_config = TEMPERATURE_SENSOR_CONFIG_DEFAULT(10, 50);
+
 void setup() {
   Serial.begin(115200);
   Serial.setDebugOutput(true);
@@ -140,12 +143,12 @@ void setup() {
   startCameraServer();
 
   WiFiAddr = IP.toString();
+
+  ESP_ERROR_CHECK(temperature_sensor_install(&temp_sensor_config, &temp_handle));
 }
 
-temperature_sensor_handle_t temp_handle = NULL;
-temperature_sensor_config_t temp_sensor_config = TEMPERATURE_SENSOR_CONFIG_DEFAULT(0, 90);
-
 int idleCounter = 0;
+bool camera_active = true;
 void loop() {
   // Do nothing. Everything is done in another task by the web server
   ESP_ERROR_CHECK(temperature_sensor_enable(temp_handle));
@@ -160,10 +163,10 @@ void loop() {
     idleCounter = 0;
   }
 
-  if (idleCounter >= 60) {
-    Serial.printf("Put camera to sleep\n", temperature);
-    sensor_t *s = esp_camera_sensor_get();
-    int res = s->set_xclk(s, LEDC_TIMER_0, 1);
+  if (idleCounter >= 60 && camera_active) {
+    Serial.printf("Put camera to sleep\n");
+    esp_camera_deinit();
+    camera_active = false;
   }
 
   delay(1000);
