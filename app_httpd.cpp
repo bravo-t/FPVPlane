@@ -41,6 +41,9 @@ calcMotorSpeed(int throttle, int steer, int* motor1Speed, int* motor2Speed)
     steer = steer > maxSteer ? maxSteer : steer;
     speed2 += steer;
   }
+  *motor1Speed = speed1;
+  *motor2Speed = speed2;
+
 }
 
 extern String WiFiAddr;
@@ -1232,11 +1235,11 @@ static esp_err_t status_handler(httpd_req_t *req) {
 static esp_err_t config_page(httpd_req_t *req) {
   httpd_resp_set_type(req, "text/html");
   String page = "";
-  page += "<!doctype html>";
+    page += "<!doctype html>";
   page += "<html>";
   page += "  <head>";
-  page += "    <meta charset="utf-8">";
-  page += "    <meta name="viewport" content="width=device-width,initial-scale=1">";
+  page += "    <meta charset='utf-8'>";
+  page += "    <meta name='viewport' content='width=device-width,initial-scale=1'>";
   page += "    <title>FPVPlane Settings</title>";
   page += "    <style>";
   page += "      body {";
@@ -1490,7 +1493,7 @@ static esp_err_t config_page(httpd_req_t *req) {
   page += "      }";
   page += "      .slider:before {";
   page += "        position: relative;";
-  page += "        content: "";";
+  page += "        content: '';";
   page += "        border-radius: 50%;";
   page += "        height: 16px;";
   page += "        width: 16px;";
@@ -1561,48 +1564,48 @@ static esp_err_t config_page(httpd_req_t *req) {
   page += "    </style>";
   page += "  </head>";
   page += "  <body>";
-  page += "    <section class="main">";
-  page += "      <div id="logo">";
+  page += "    <section class='main'>";
+  page += "      <div id='logo'>";
   page += "        <label>FPVPlane settings</label>";
   page += "      </div>";
-  page += "      <div id="content">";
-  page += "        <div id="sidebar">";
-  page += "          <input type="checkbox" id="nav-toggle-cb" checked="checked">";
-  page += "          <nav id="menu">";
-  page += "            <section id="steer" class="nothidden">";
-  page += "              <div class="input-group" id="set-xclk-group">";
-  page += "                <label for="max-steer">Max Steer</label>";
-  page += "                <div class="text">";
-  page += "                  <input id="max-steer" type="text" minlength="1" maxlength="3" size="2" value="10">";
+  page += "      <div id='content'>";
+  page += "        <div id='sidebar'>";
+  page += "          <input type='checkbox' id='nav-toggle-cb' checked='checked'>";
+  page += "          <nav id='menu'>";
+  page += "            <section id='steer' class='nothidden'>";
+  page += "              <div class='input-group' id='set-xclk-group'>";
+  page += "                <label for='max-steer'>Max Steer</label>";
+  page += "                <div class='text'>";
+  page += "                  <input id='max-steer' type='text' minlength='1' maxlength='3' size='2' value='10'>";
   page += "                </div>";
-  page += "                <button class="inline-button" id="set-max-steer">Set</button>";
+  page += "                <button class='inline-button' id='set-max-steer'>Set</button>";
   page += "              </div>";
   page += "            </section>";
-  page += "            <div class="input-group" id="framesize-group">";
-  page += "              <label for="framesize">Resolution</label>";
-  page += "              <select id="framesize" class="default-action">";
+  page += "            <div class='input-group' id='framesize-group'>";
+  page += "              <label for='framesize'>Resolution</label>";
+  page += "              <select id='framesize' class='default-action'>";
   page += "                <!-- 2MP -->";
-  page += "                <option value="13">UXGA(1600x1200)</option>";
-  page += "                <option value="12">SXGA(1280x1024)</option>";
-  page += "                <option value="11">HD(1280x720)</option>";
-  page += "                <option value="10">XGA(1024x768)</option>";
-  page += "                <option value="9">SVGA(800x600)</option>";
-  page += "                <option value="8">VGA(640x480)</option>";
-  page += "                <option value="7">HVGA(480x320)</option>";
-  page += "                <option value="6">CIF(400x296)</option>";
-  page += "                <option value="5">QVGA(320x240)</option>";
-  page += "                <option value="4">240x240</option>";
-  page += "                <option value="3">HQVGA(240x176)</option>";
-  page += "                <option value="2">QCIF(176x144)</option>";
-  page += "                <option value="1">QQVGA(160x120)</option>";
-  page += "                <option value="0">96x96</option>";
+  page += "                <option value='13'>UXGA(1600x1200)</option>";
+  page += "                <option value='12'>SXGA(1280x1024)</option>";
+  page += "                <option value='11'>HD(1280x720)</option>";
+  page += "                <option value='10'>XGA(1024x768)</option>";
+  page += "                <option value='9'>SVGA(800x600)</option>";
+  page += "                <option value='8'>VGA(640x480)</option>";
+  page += "                <option value='7'>HVGA(480x320)</option>";
+  page += "                <option value='6'>CIF(400x296)</option>";
+  page += "                <option value='5'>QVGA(320x240)</option>";
+  page += "                <option value='4'>240x240</option>";
+  page += "                <option value='3'>HQVGA(240x176)</option>";
+  page += "                <option value='2'>QCIF(176x144)</option>";
+  page += "                <option value='1'>QQVGA(160x120)</option>";
+  page += "                <option value='0'>96x96</option>";
   page += "              </select>";
   page += "            </div>";
-  page += "            <div class="input-group" id="quality-group">";
-  page += "              <label for="quality">Quality</label>";
-  page += "              <div class="range-min">4</div>";
-  page += "              <input type="range" id="quality" min="4" max="63" value="10" class="default-action">";
-  page += "              <div class="range-max">63</div>";
+  page += "            <div class='input-group' id='quality-group'>";
+  page += "              <label for='quality'>Quality</label>";
+  page += "              <div class='range-min'>4</div>";
+  page += "              <input type='range' id='quality' min='4' max='63' value='10' class='default-action'>";
+  page += "              <div class='range-max'>63</div>";
   page += "            </div>";
   page += "          </nav>";
   page += "        </div>";
@@ -1945,7 +1948,7 @@ static esp_err_t index_handler2(httpd_req_t *req) {
   page+= "  height: 300px;";
   page+= "  writing-mode: vertical-lr;";
   page+= "  direction: rtl;";
-  page+= "  margin: 0px 30px 0px 0px";
+  page+= "  margin: 0px 30px 0px 15px";
   page+= "}";
   page+= ".Steer {";
   page+= "  width: 200px;";
@@ -1956,7 +1959,7 @@ static esp_err_t index_handler2(httpd_req_t *req) {
   page+= "<div style='display: flex; flex-direction: row; align-items: center; justify-content: center;'>";
   page+= "<p align=left>";
   page+= "<input class='Throttle' type='range' min='0' max='255' value='0' id='throttleSlider' oninput='updateMotor(1, this.value)'>";
-  page+= "<p align=center><IMG SRC='127.0.0.1' style='width:350px; transform:rotate(0deg);'></p>";
+  page+= "<p align=center><IMG SRC='http://" + WiFiAddr + ":81/stream' style='width:350px; transform:rotate(0deg);'></p>";
   page+= "<p align=right>";
   page+= "<input class='Steer' id='steerSlider' type='range' min='-128' max='127' value='0' style='writing-mode: bt-lr;' oninput='updateMotor(2, this.value)' onmouseup='resetSteer()' ontouchend='resetSteer()'>";
   page+= "<script>";
@@ -2028,7 +2031,7 @@ static esp_err_t motor_handler2(httpd_req_t *req) {
   char*  buf;
   size_t buf_len;
   char function[32] = {1, 2};
-  signed char amount[32] = {0,};
+  char amount[32] = {0,};
 
   buf_len = httpd_req_get_url_query_len(req) + 1;
   if (buf_len > 1) {
@@ -2038,8 +2041,8 @@ static esp_err_t motor_handler2(httpd_req_t *req) {
       return ESP_FAIL;
     }
     if (httpd_req_get_url_query_str(req, buf, buf_len) == ESP_OK) {
-      if (httpd_query_key_value(buf, "f", function, sizeof(motor)) == ESP_OK &&
-          httpd_query_key_value(buf, "a", amount, sizeof(mspeed)) == ESP_OK) {
+      if (httpd_query_key_value(buf, "f", function, sizeof(function)) == ESP_OK &&
+          httpd_query_key_value(buf, "a", amount, sizeof(amount)) == ESP_OK) {
       } else {
         free(buf);
         httpd_resp_send_404(req);
