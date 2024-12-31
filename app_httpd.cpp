@@ -15,6 +15,9 @@
 #include "esp_timer.h"
 #include "esp_camera.h"
 #include "img_converters.h"
+#include "fb_gfx.h"
+#include "esp32-hal-ledc.h"
+#include "sdkconfig.h"
 #include "Arduino.h"
 
 #define CAM_USE_MULTICLIENT 0
