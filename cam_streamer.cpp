@@ -121,7 +121,7 @@ void cam_streamer_task(void *p) {
                 continue;
             }
 
-            if(is_send_error(httpd_socket_send(s->server, fd, s->buf->buf, s->buf->len, 0))) {
+            if(is_send_error(httpd_socket_send(s->server, fd, (const char*) s->buf->buf, s->buf->len*sizeof(uint8_t)/sizeof(char), 0))) {
                 cam_streamer_decrement_num_clients(s);
                 continue;
             }
