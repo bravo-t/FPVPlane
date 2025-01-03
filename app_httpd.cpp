@@ -20,7 +20,7 @@
 #include "sdkconfig.h"
 #include "Arduino.h"
 
-#define CAM_USE_MULTICLIENT 0
+#define CAM_USE_MULTICLIENT 1
 #if CAM_USE_MULTICLIENT == 1
 #define CAM_STREAMER_DESIRED_FPS 20
 #include "cam_streamer.h"
@@ -2365,8 +2365,7 @@ void startCameraServer() {
 		cam_streamer_init(cam_streamer, stream_httpd, CAM_STREAMER_DESIRED_FPS);
 		cam_streamer_start(cam_streamer);
 #endif
-		}
-  }
+	}
 }
 
 void setupLedFlash(int pin) {
