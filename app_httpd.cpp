@@ -1997,57 +1997,6 @@ static esp_err_t index_handler2(httpd_req_t *req) {
   return httpd_resp_send(req, &page[0], strlen(&page[0]));
 }
 
-static esp_err_t index_handler(httpd_req_t *req) {
-  httpd_resp_set_type(req, "text/html");
-  String page = "";
-  page += "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0\">\n";
-  page += "<script>var xhttp = new XMLHttpRequest();</script>";
-  page += "<script>function getsend(arg) { xhttp.open('GET', arg +'?' + new Date().getTime(), true); xhttp.send() } </script>";
-  page += "<p align=center><img id='stream' src='http://" + WiFiAddr + ":81/stream' style='width:350px; transform:rotate(0deg);'></p><br/><br/>";
-  page += "<div style='margin-top: 150px;'>";
-
-  page += "<style>";
-  page += "input[type=range] {";
-  page += "  -webkit-appearance: none;";
-  page += "  appearance: none;";
-  page += "  width: 300px;";
-  page += "  height: 40px;";
-  page += "  background: #7d7d7d;";
-  page += "}";
-  page += "input[type=range]::-webkit-slider-thumb {";
-  page += "  -webkit-appearance: none;";
-  page += "  appearance: none;";
-  page += "  width: 40px;";
-  page += "  height: 40px;";
-  page += "  background: #0048ff;";
-  page += "  border: 2px solid #333333;";
-  page += "  border-radius: 50%;";
-  page += "}";
-  page += "</style>";
-
-  // First vertical slider for motor 1
-  page += "<div style='display: flex; flex-direction: row; align-items: center; justify-content: center;'>";
-  page += "<p align=left>";
-  page += "<input type='range' min='0' max='255' value='0' id='motor1Slider' style='writing-mode: bt-lr; transform: rotate(270deg);' oninput='updateMotor(1, this.value)'>";
-  //page += "</p>";
-
-  // Second vertical slider for motor 2
-  page += "<p align=right>";
-  page += "<input type='range' min='0' max='255' value='0' id='motor2Slider' style='writing-mode: bt-lr; transform: rotate(270deg);' oninput='updateMotor(2, this.value)'>";
-  //page += "</p>";
-
-  // Script to send motor speed updates
-  page += "<script>";
-  page += "function updateMotor(motorNum, mspeed) {";
-  page += "var xhttp = new XMLHttpRequest();";
-  page += "xhttp.open('GET', '/motor?m=' + motorNum + '&s=' + mspeed, true);";
-  page += "xhttp.send();";
-  page += "}";
-  page += "</script>";
-
-  return httpd_resp_send(req, &page[0], strlen(&page[0]));
-}
-
 static esp_err_t motor_handler2(httpd_req_t *req) {
   char*  buf;
   size_t buf_len;
