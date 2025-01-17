@@ -19,8 +19,8 @@
 #include "esp32-hal-ledc.h"
 #include "sdkconfig.h"
 #include "Arduino.h"
+#include "basic_define.h"
 
-#define CAM_USE_MULTICLIENT 1
 #if CAM_USE_MULTICLIENT == 1
 #define CAM_STREAMER_DESIRED_FPS 20
 #include "cam_streamer.h"
@@ -36,24 +36,52 @@ int prevThrottle = 0;
 int prevSteer = 0;
 int maxMotorSpeed = 255;
 float maxSteer = 20;
+size_t minThrottleDuty = 0;
+size_t maxThrottleDuty = LEDC_DUTY_RES;
+size_t maxSteerDuty = 0.1 * LEDC_DUTY_RES;
 
 void
-calcMotorSpeed(int throttle, int steer, int* motor1Speed, int* motor2Speed)
+updateMotorSpeed(int throttle, int steer)
 {
+#if USE_ESP32_PWM_API == 0
+  throttle = map(throttle, 0, 255, 0, maxMotorSpeed); // Map slider value to motor speed range
+  steer = map(steer, -128, 127, -maxSteer, maxSteer); // Map slider value to motor speed range
   int availThrottle = maxMotorSpeed - maxSteer;
-  int speed1 = throttle > availThrottle ? availThrottle : throttle;
-  int speed2 = speed1;
+  int motor1Speed = throttle > availThrottle ? availThrottle : throttle;
+  int motor2Speed = motor1Speed;
   if (steer > 0) {
     steer = steer > maxSteer ? maxSteer : steer;
-    speed1 += steer;
+    motor1Speed += steer;
   } else {
     steer = -steer;
     steer = steer > maxSteer ? maxSteer : steer;
-    speed2 += steer;
+    motor2Speed += steer;
   }
-  *motor1Speed = speed1;
-  *motor2Speed = speed2;
-
+  Serial.printf("throttle: %d, steer: %d, left motor speed: %d, right motor speed: %d\n", amountValue, prevSteer, motor1Speed, motor2Speed);
+  analogWrite(gpLm, abs(motor1Speed)); // Assuming PWM control
+  analogWrite(gpRm, abs(motor2Speed)); // Assuming PWM control
+#else
+  int throttleDuty = map(throttle, 0, 255, minThrottleDuty, maxThrottleDuty);
+  int steerDuty = map(steer, -128, 127, -maxSteerDuty, maxSteerDuty);
+  int availThrottleDuty = maxThrottleDuty - maxSteerDuty;
+  int motor1Speed = throttleDuty > availThrottleDuty ? availThrottleDuty : throttleDuty;
+  int motor2Speed = motor1Speed;
+  if (steerDuty > 0) {
+    steerDuty = steerDuty > maxSteerDuty ? maxSteerDuty : steerDuty;
+    motor1Speed += steerDuty;
+  } else {
+    steerDuty = -steerDuty;
+    steerDuty = steerDuty > maxSteerDuty ? maxSteerDuty : steerDuty;
+    motor2Speed += steerDuty;
+  }
+  Serial.printf("throttle: %d, steer: %d, left motor speed: %d, right motor speed: %d\n", amountValue, prevSteer, motor1Speed, motor2Speed);
+  ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEFT_MOTOR_PWM_CHANNEL, motor1Speed));
+  ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEFT_MOTOR_PWM_CHANNEL));
+  ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, RIGHT_MOTOR_PWM_CHANNEL, motor2Speed));
+  ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, RIGHT_MOTOR_PWM_CHANNEL));
+#endif
+  prevThrottle = throttle;
+  prevSteer = steer;
 }
 
 extern String WiFiAddr;
@@ -1256,7 +1284,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
 static esp_err_t config_page(httpd_req_t *req) {
   httpd_resp_set_type(req, "text/html");
   String page = "";
-    page += "<!doctype html>";
+  page += "<!doctype html>";
   page += "<html>";
   page += "  <head>";
   page += "    <meta charset='utf-8'>";
@@ -1593,13 +1621,43 @@ static esp_err_t config_page(httpd_req_t *req) {
   page += "        <div id='sidebar'>";
   page += "          <input type='checkbox' id='nav-toggle-cb' checked='checked'>";
   page += "          <nav id='menu'>";
-  page += "            <section id='steer' class='nothidden'>";
-  page += "              <div class='input-group' id='set-xclk-group'>";
-  page += "                <label for='max-steer'>Max Steer</label>";
+  page += "            <section id='pwm' class='nothidden'>";
+  page += "              <div class='input-group'>";
+  page += "                <label for='pwm-freq'>PWM Frequency</label>";
   page += "                <div class='text'>";
-  page += "                  <input id='max-steer' type='text' minlength='1' maxlength='3' size='2' value='10'>";
+  page += "                  <input id='pwm-freq' type='text' minlength='1' maxlength='5' size='5' value='50'>";
   page += "                </div>";
-  page += "                <button class='inline-button' id='set-max-steer'>Set</button>";
+  page += "                <button class='inline-button' id='set-pwm-freq'>Set</button>";
+  page += "              </div>";
+  page += "              <div class='input-group'>";
+  page += "                <label for='min-throttle'>Min Throttle PWM Duty Cycle</label>";
+  page += "                <div class='text'>";
+  page += "                  <input id='min-throttle' type='text' minlength='1' maxlength='5' size='5' value='0'>";
+  page += "                </div>";
+  page += "                <button class='inline-button' id='set-min-throttle'>Set</button>";
+  page += "              </div>";
+  page += "              <div class='input-group'>";
+  page += "                <label for='max-throttle'>Max Throttle PWM Duty Cycle</label>";
+  page += "                <div class='text'>";
+  page += "                  <input id='max-throttle' type='text' minlength='1' maxlength='5' size='5' value='1'>";
+  page += "                </div>";
+  page += "                <button class='inline-button' id='set-max-throttle'>Set</button>";
+  page += "              </div>";
+  page += "              <div class='input-group'>";
+  page += "                <label for='max-steer-dc'>Max Steer PWM Duty Cycle</label>";
+  page += "                <div class='text'>";
+  page += "                  <input id='max-steer-dc' type='text' minlength='1' maxlength='5' size='5' value='0.1'>";
+  page += "                </div>";
+  page += "                <button class='inline-button' id='set-max-steer-dc'>Set</button>";
+  page += "              </div>";
+  page += "            </section>";
+  page += "            <section id='steer-amount' class='nothidden'>";
+  page += "              <div class='input-group'>";
+  page += "                <label for='max-steer-amount'>Max Steer Amount</label>";
+  page += "                <div class='text'>";
+  page += "                  <input id='max-steer-amount' type='text' minlength='1' maxlength='3' size='2' value='10'>";
+  page += "                </div>";
+  page += "                <button class='inline-button' id='set-max-steer-amount'>Set</button>";
   page += "              </div>";
   page += "            </section>";
   page += "            <div class='input-group' id='framesize-group'>";
@@ -1653,12 +1711,60 @@ static esp_err_t config_page(httpd_req_t *req) {
   page += "    cb(-1, err);";
   page += "    });";
   page += "  }";
+  page += "  function setPWMFreq(freq, cb){";
+  page += "  fetchUrl(`${baseHost}/settings?var=pwm-freq&val=${freq}`, cb);";
+  page += "  }";
+  page += "  const setPWMFreqButton = document.getElementById('set-pwm-freq')";
+  page += "  setPWMFreqButton.onclick = () => {";
+  page += "  let value = parseInt(document.getElementById('pwm-freq').value);";
+  page += "  setPWMFreq(value, function(code, txt){";
+  page += "    if(code != 200){";
+  page += "    alert('Error['+code+']: '+txt);";
+  page += "    }";
+  page += "  });";
+  page += "  }";
+  page += "  function setMinThrottleDuty(val, cb){";
+  page += "  fetchUrl(`${baseHost}/settings?var=min-throttle&val=${val}`, cb);";
+  page += "  }";
+  page += "  const setMinThrottleButton = document.getElementById('set-min-throttle')";
+  page += "  setMinThrottleButton.onclick = () => {";
+  page += "  let value = parseInt(document.getElementById('min-throttle').value);";
+  page += "  setMinThrottleDuty(value, function(code, txt){";
+  page += "    if(code != 200){";
+  page += "    alert('Error['+code+']: '+txt);";
+  page += "    }";
+  page += "  });";
+  page += "  }";
+  page += "  function setMaxThrottleDuty(val, cb){";
+  page += "  fetchUrl(`${baseHost}/settings?var=max-throttle&val=${val}`, cb);";
+  page += "  }";
+  page += "  const setMaxThrottleButton = document.getElementById('set-max-throttle')";
+  page += "  setMaxThrottleButton.onclick = () => {";
+  page += "  let value = parseInt(document.getElementById('max-throttle').value);";
+  page += "  setMaxThrottleDuty(value, function(code, txt){";
+  page += "    if(code != 200){";
+  page += "    alert('Error['+code+']: '+txt);";
+  page += "    }";
+  page += "  });";
+  page += "  }";
+  page += "  function setMaxSteerDuty(val, cb){";
+  page += "  fetchUrl(`${baseHost}/settings?var=max-steer&val=${val}`, cb);";
+  page += "  }";
+  page += "  const setMaxSteerDCButton = document.getElementById('set-max-steer-dc')";
+  page += "  setMaxSteerDCButton.onclick = () => {";
+  page += "  let value = parseInt(document.getElementById('max-steer-dc').value);";
+  page += "  setMaxSteerDuty(value, function(code, txt){";
+  page += "    if(code != 200){";
+  page += "    alert('Error['+code+']: '+txt);";
+  page += "    }";
+  page += "  });";
+  page += "  }";
   page += "  function setMaxSteer(steer, cb){";
   page += "  fetchUrl(`${baseHost}/settings?var=steer&val=${steer}`, cb);";
   page += "  }";
-  page += "  const setSteerButton = document.getElementById('set-max-steer')";
+  page += "  const setSteerButton = document.getElementById('set-max-steer-amount')";
   page += "  setSteerButton.onclick = () => {";
-  page += "  let value = parseInt(document.getElementById('max-steer').value);";
+  page += "  let value = parseInt(document.getElementById('max-steer-amount').value);";
   page += "  setMaxSteer(value, function(code, txt){";
   page += "    if(code != 200){";
   page += "    alert('Error['+code+']: '+txt);";
@@ -1755,19 +1861,39 @@ static esp_err_t settings_handler(httpd_req_t *req) {
   }
   free(buf);
 
-  int val = atoi(value);
-  Serial.printf("%s = %d\n", variable, val);
   sensor_t *s = esp_camera_sensor_get();
   int res = 0;
 
   if (!strcmp(variable, "framesize")) {
+    int val = atoi(value);
+    Serial.printf("%s = %d\n", variable, val);
     if (s->pixformat == PIXFORMAT_JPEG) {
       res = s->set_framesize(s, (framesize_t)val);
     }
   } else if (!strcmp(variable, "quality")) {
+    int val = atoi(value);
+    Serial.printf("%s = %d\n", variable, val);
     res = s->set_quality(s, val);
   } else if (!strcmp(variable, "steer")) {
+    int val = atoi(value);
+    Serial.printf("%s = %d\n", variable, val);
     maxSteer = val;
+  } else if (!strcmp(variable, "pwm-freq")) {
+    int val = atoi(value);
+    Serial.printf("%s = %d\n", variable, val);
+    ledc_set_freq(LEDC_MODE, LEDC_TIMER, val);
+  } else if (!strcmp(variable, "min-thrttole")) {
+    float val = atof(value);
+    Serial.printf("%s = %f\n", variable, val);
+    minThrottleDuty = val * LEDC_DUTY_RES;
+  } else if (!strcmp(variable, "max-thrttole")) {
+    float val = atof(value);
+    Serial.printf("%s = %f\n", variable, val);
+    maxThrottleDuty = val * LEDC_DUTY_RES;
+  } else if (!strcmp(variable, "max-steer")) {
+    float val = atof(value);
+    Serial.printf("%s = %f\n", variable, val);
+    maxSteerDuty = val * LEDC_DUTY_RES;
   } else {
     Serial.printf("Unknown command: %s\n", variable);
     res = -1;
@@ -2033,20 +2159,9 @@ static esp_err_t motor_handler2(httpd_req_t *req) {
   int amountValue = atoi(amount);
 
   if (funcValue == 1) {
-    /// Throttle
-    amountValue = map(amountValue, 0, 255, 0, maxMotorSpeed); // Map slider value to motor speed range
-    calcMotorSpeed(amountValue, prevSteer, &motor1Speed, &motor2Speed);
-    Serial.printf("throttle: %d, steer: %d, left motor speed: %d, right motor speed: %d\n", amountValue, prevSteer, motor1Speed, motor2Speed);
-    analogWrite(gpLm, abs(motor1Speed)); // Assuming PWM control
-    analogWrite(gpRm, abs(motor2Speed)); // Assuming PWM control
-    prevThrottle = amountValue;
+    updateMotorSpeed(amountValue, prevSteer);
   } else if (funcValue == 2) {
-    amountValue = map(amountValue, -128, 127, -maxSteer, maxSteer); // Map slider value to motor speed range
-    calcMotorSpeed(prevThrottle, amountValue, &motor1Speed, &motor2Speed);
-    Serial.printf("throttle: %d, steer: %d, left motor speed: %d, right motor speed: %d\n", prevThrottle, amountValue, motor1Speed, motor2Speed);
-    analogWrite(gpLm, abs(motor1Speed)); // Assuming PWM control
-    analogWrite(gpRm, abs(motor2Speed)); // Assuming PWM control
-    prevSteer = amountValue;
+    updateMotorSpeed(prevThrottle, amountValue);
 }
 
   httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");

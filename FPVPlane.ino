@@ -2,6 +2,11 @@
 #include "driver/temperature_sensor.h"
 #include <WiFi.h>
 #include <WiFiServer.h>
+#include "basic_define.h"
+
+#if USE_ESP32_PWM_API == 1
+#include "driver/ledc.h"
+#endif
 
 //
 // WARNING!!! PSRAM IC required for UXGA resolution and high JPEG quality
@@ -27,6 +32,44 @@ const char *password = "tang1783";
 extern int gpLm = D2; // Motor 1
 extern int gpRm = D3; // Motor 2
 extern String WiFiAddr = "";
+
+#if USE_ESP32_PWM_API == 1
+static void 
+pwm_init(void)
+{
+  // Prepare and then apply the LEDC PWM timer configuration
+  ledc_timer_config_t ledc_timer = {
+    .speed_mode       = LEDC_MODE,
+    .duty_resolution  = LEDC_DUTY_RES,
+    .timer_num        = LEDC_TIMER,
+    .freq_hz          = LEDC_FREQUENCY, 
+    .clk_cfg          = LEDC_AUTO_CLK
+  };
+  ESP_ERROR_CHECK(ledc_timer_config(&ledc_timer));
+
+  // Prepare and then apply the LEDC PWM channel configuration
+  ledc_channel_config_t left_channel = {
+    .speed_mode     = LEDC_MODE,
+    .channel        = LEFT_MOTOR_PWM_CHANNEL,
+    .timer_sel      = LEDC_TIMER,
+    .intr_type      = LEDC_INTR_DISABLE,
+    .gpio_num       = gpLm,
+    .duty           = 0, // Set duty to 0%
+    .hpoint         = 0
+  };
+  ESP_ERROR_CHECK(ledc_channel_config(&left_channel));
+  ledc_channel_config_t right_channel = {
+    .speed_mode     = LEDC_MODE,
+    .channel        = RIGHT_MOTOR_PWM_CHANNEL,
+    .timer_sel      = LEDC_TIMER,
+    .intr_type      = LEDC_INTR_DISABLE,
+    .gpio_num       = gpRm,
+    .duty           = 0, // Set duty to 0%
+    .hpoint         = 0
+  };
+  ESP_ERROR_CHECK(ledc_channel_config(&right_channel));
+}
+#endif
 
 void startCameraServer();
 void setupLedFlash(int pin);
