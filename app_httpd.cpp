@@ -57,7 +57,9 @@ updateMotorSpeed(int throttle, int steer)
     steer = steer > maxSteer ? maxSteer : steer;
     motor2Speed += steer;
   }
+#if VERBOSE_OUTPUT == 1
   Serial.printf("throttle: %d, steer: %d, left motor speed: %d, right motor speed: %d\n", amountValue, prevSteer, motor1Speed, motor2Speed);
+#endif
   analogWrite(gpLm, abs(motor1Speed)); // Assuming PWM control
   analogWrite(gpRm, abs(motor2Speed)); // Assuming PWM control
 #else
@@ -74,7 +76,9 @@ updateMotorSpeed(int throttle, int steer)
     steerDuty = steerDuty > maxSteerDuty ? maxSteerDuty : steerDuty;
     motor2Speed += steerDuty;
   }
+#if VERBOSE_OUTPUT == 1
   Serial.printf("throttle: %d, steer: %d, left motor speed: %d, right motor speed: %d\n", amountValue, prevSteer, motor1Speed, motor2Speed);
+#endif
   ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, LEFT_MOTOR_PWM_CHANNEL, motor1Speed));
   ESP_ERROR_CHECK(ledc_update_duty(LEDC_MODE, LEFT_MOTOR_PWM_CHANNEL));
   ESP_ERROR_CHECK(ledc_set_duty(LEDC_MODE, RIGHT_MOTOR_PWM_CHANNEL, motor2Speed));

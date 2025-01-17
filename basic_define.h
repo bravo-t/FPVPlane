@@ -1,6 +1,7 @@
 #ifndef _DEF_H_
 #define _DEF_H_
 
+#define VERBOSE_OUTPUT 1
 #define CAM_USE_MULTICLIENT 1
 #define USE_ESP32_PWM_API 0
 
