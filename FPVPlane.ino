@@ -83,6 +83,9 @@ void setup() {
   Serial.setDebugOutput(true);
   Serial.println();
 
+#if USE_ESP32_PWM_API == 1
+  pwm_init();
+#endif
 
   pinMode(gpLm, OUTPUT); //Left Motor
   pinMode(gpRm, OUTPUT); //Right Motor
